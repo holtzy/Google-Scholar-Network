@@ -1,0 +1,171 @@
+---
+title: "Getting google scholar informations with R"
+author: "by [Yan Holtz](https://github.com/holtzy/) - `r format(Sys.time(), '%d %B %Y')`"
+output:
+  epuRate::epurate:
+    toc: FALSE
+    code_folding: "show"
+---
+
+<br><br>
+
+> This documents provides a few line of codes to retrieve information from the google scholar API.
+
+
+
+# Load libraries
+***
+
+A few library are needed for this work, notably the scholar library that allows to call the google scholar API.
+```{r, warning=FALSE, message=FALSE}
+library(rmarkdown)
+library(scholar)      # To request data from google scholar.
+library(tidyverse)    # What do you do without?
+library(hrbrthemes)
+library(DT)
+```
+
+
+# Basic information about a researcher
+***
+
+In this document we will study the publication of my Colleague [Vincent Ranwez](https://sites.google.com/site/ranwez/). His google scholar ID is `WLaQnegAAAAJ&hl`
+```{r}
+# Define the google scholar id
+id <- 'WLaQnegAAAAJ&hl'       # Vincent Ranwez
+```
+
+Get his profile and print his name
+```{r}
+# Make an object called l with all the basic info of this id: name, affiliation, # of cites, H index, homepage ...
+l <- get_profile(id)
+name=l$name
+tmp=strsplit(name, " ") %>% unlist()
+last_name = tmp[length(tmp)]
+
+# Show the last name
+last_name
+```
+
+# Number of citation per year:
+***
+
+This allows to reproduce the chart on the right of the google scholar page: 
+```{r, fig.align="center", fig.width=7}
+# get the info
+citation = get_citation_history(id)
+
+# plot it
+citation %>% 
+  ggplot( aes(x=year, y=cites)) + 
+    geom_segment( aes(x=year, y=0, xend=year, yend=cites), color="grey") +
+    geom_point( size=4, col="#69b3a2") + 
+    theme_ipsum()
+```
+
+
+
+
+# List of publications
+***
+Here is the detail of the publication:
+```{r, warning=FALSE}
+data=get_publications(id)
+datatable(data, rownames = FALSE,  options = list(pageLength = 4))
+```
+
+
+
+# Involved Journals?
+***
+In total, `r nrow(data)` paper have been published in `r length(unique(tolower(data$journal)))` different journals. Here is an overview of the most frequent journals.
+```{r, fig.width=8}
+table(tolower(data$journal)) %>% as.data.frame() %>% filter(Freq>1) %>% arrange(Freq) %>% mutate(Var1=factor(Var1, Var1)) %>%
+  ggplot(aes(x=Var1, y=Freq)) +
+    geom_bar(stat="identity", width=0.5, fill="#69b3a2") +
+    coord_flip() +
+    xlab("") +
+    theme_ipsum()
+```
+
+
+# Number of paper per year?
+***
+
+```{r, fig.align="center", fig.width=7, warning=FALSE, message=FALSE}
+data %>% 
+  ggplot(aes(x=year)) + 
+    geom_bar( fill="#69b3a2") +
+    theme_ipsum()
+```
+
+
+# Connection matrix of co-authors
+***
+
+Since the list of authors is available for each publication, it is possible to compute an adjacency matrix providing the relationship between every coauthors.
+```{r}
+# Compute all the pairs observed in the dataset:
+return_all_pair=function(x){
+  tmp = x  %>% gsub(", \\.\\.\\.", "", .) %>% strsplit(", ")  %>% unlist()
+  if(length(tmp)>1){
+    tmp = t(combn(tmp, 2))
+  }
+  return(tmp)
+}
+list_of_pairs = lapply( data$author, return_all_pair ) 
+connect = do.call(rbind, list_of_pairs) %>% unique()
+colnames(connect)=c("from", "to")
+
+# Delete the target author from this list
+connect = connect %>% 
+  as.data.frame() %>% 
+  filter( !grepl(last_name, from, ignore.case = TRUE) ) %>% 
+  filter( !grepl(last_name, to, ignore.case = TRUE) )
+
+# Change format to adjacency matrix and save it
+#connect %>% 
+#  mutate(value=1) %>%
+#  spread(from, to)
+```
+
+<br>
+
+In total, `r c( as.character(connect$from), as.character(connect$to)) %>% unique() %>% length()` co-authors have been found. But who are the most frequent coauthors?
+
+
+
+
+
+```{r, fig.align="center", fig.width=7, fig.height=9, warning=FALSE, message=FALSE}
+c( as.character(connect$from), as.character(connect$to)) %>% 
+  table() %>% 
+  as.data.frame() %>% 
+  filter(Freq>5) %>% 
+  arrange(Freq) %>% 
+  mutate(Var1=factor(.,.)) %>%
+    ggplot(aes(x=Var1, y=Freq)) +
+      geom_segment( aes(x=Var1, y=0, xend=Var1, yend=Freq), color="grey") +
+      geom_point( size=4, col="#69b3a2") + 
+      coord_flip() +
+      xlab("") +
+      theme_ipsum() +
+      ylab("Number of publication together")
+```
+
+
+
+
+#- Visualization
+***
+
+The adjacency matrix of co-authors connection is a dataset example used in the [data to viz](http://www.data-to-viz.com) project. Check the [dedicated webpage](http://www.data-to-viz/story/13_AdjacencyMatrix.html) for a few visualization made with this matrix.
+
+
+
+
+
+
+
+
+
