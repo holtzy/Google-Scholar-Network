@@ -1,6 +1,6 @@
-Pimp my RMD
+Using R to study Google Scholar
 ===================
 
-This repository provides a few tips I need to remember to customize the appearance of my [R Markdown](https://rmarkdown.rstudio.com) documents.  
+Most of the researcher have a [Google Scholar](https://scholar.google.com.au) page with information concerning their publication.
 
-You can have a look to these tips here: https://holtzy.github.io/Pimp-my-rmd/
+This repo uses R to analyze these information. See the [dedicated webpage](https://holtzy.github.io/Google-Scholar-Network/).
