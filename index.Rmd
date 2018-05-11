@@ -124,9 +124,10 @@ connect = connect %>%
   filter( !grepl(last_name, to, ignore.case = TRUE) )
 
 # Change format to adjacency matrix and save it
-#connect %>% 
-#  mutate(value=1) %>%
-#  spread(from, to)
+adjacency <- connect %>% 
+  mutate(value=1) %>%
+  spread(key = to, value = value)
+write.table(adjacency, file="DATA/ranwez_adj.csv", row.names=F)
 ```
 
 <br>
